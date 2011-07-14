@@ -1,0 +1,39 @@
+#!/bin/sh
+
+MV=/bin/mv
+PERL=/usr/bin/perl
+PERLTIDY=/usr/bin/perltidy
+PERLCRITIC=/usr/bin/perlcritic
+
+[ $# -lt 1 ] \
+	&& { echo "usage: $0 <perl_script_or_module_file>..." ; exit 1 ; }
+
+[ ! -f $1 -a -r $1 ] \
+	&& { echo "unreadable file: $1" ; exit 2 ; }
+
+
+function check_exec() {
+	FAIL_EXEC=0
+	for EXECUTABLE in $@
+	do
+		if [ ! -x $EXECUTABLE ]
+		then
+			echo "$EXECUTABLE is NOT executable, will fail later on."
+			FAIL_EXEC=$(( $FAIL_EXEC + 1 ))
+		fi
+	done
+	if [ $FAIL_EXEC -gt 0 ]
+	then
+		exit 2
+	fi
+}
+
+check_exec $PERL $PERLTIDY $PERLCRITIC
+
+for FILE in $*
+do
+$PERL -c $FILE \
+	&& $PERLTIDY $FILE \
+	&& $MV $FILE.tdy $FILE \
+	&& $PERLCRITIC $FILE
+done
