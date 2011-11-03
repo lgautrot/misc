@@ -1,0 +1,175 @@
+﻿#!/usr/bin/perl
+
+use strict;
+use warnings;
+use feature "switch";
+use LWP::Simple;
+use HTML::TreeBuilder;
+use Getopt::Long;
+use Pod::Usage;
+
+our $VERSION = '0.4';
+
+my $format = 'SQL';
+my ( $output, $verbose, $help, $debug );
+
+GetOptions(
+    "format=s" => \$format,
+    "output=s" => \$output,
+    "verbose"  => \$verbose,
+    "help"     => \$help,
+    "debug"    => \$debug,
+);
+
+pod2usage(1) if $help;
+
+# outputs to the selected file, or by default to STDOUT
+if ($output) {
+    open( STDOUT, '>', $output )
+      or die "can't open output: $!";
+}
+
+my $base_url = 'http://www2.transports.equipement.gouv.fr/registres';
+
+# grab data from the website
+foreach my $registry (qw/voyageurs marchandises commissionnaires/) {
+    foreach my $page ( 0 .. 100 ) {
+        my $url = "$base_url/$registry/$page.htm";
+        warn $url, "\n" if $verbose;
+
+        my $html = get $url;
+        warn $html, "\n" if $debug;
+        my $tree = HTML::TreeBuilder->new_from_content($html);
+
+        # useful data start at the eleventh table
+        my $table = ( $tree->look_down( '_tag', 'table' ) )[10];
+
+        # extracts all values from the table
+        foreach my $tr ( $table->look_down( '_tag', 'tr' ) ) {
+
+            # gets the first letter in the registry name (M/V/C)
+            my @values = uc($registry) =~ m/^(.)/;
+
+            # push each cell data in a list
+            foreach my $td ( $tr->look_down( '_tag', 'td' ) ) {
+                push @values, $td->as_text;
+            }
+
+            # print the list using the selected format
+            print_line(@values);
+        }
+        $tree->delete;
+    }
+}
+
+sub print_line {
+
+    my @values = @_;
+    my @fields = qw/registre siret raison_sociale code_postal commune siege
+      copies_licences_interieures copies_licences_communautaires/;
+
+    # skip table header
+    return if @values ~~ /Siret/;
+
+    given ($format) {
+
+        when (/SQL/) {
+            
+            my @escaped_values =
+              map { ( my $s = $_ ) =~ s/'/''/g; $s } @values;
+            @escaped_values =
+              map { ( my $s = $_ ) =~ s/'(\d+)[^\d]+(\d+)'/'$1$2'/g; $s } @values;
+            print "INSERT INTO entreprises(", join( ',', @fields ),
+              ") VALUES('",
+              join( "','", @escaped_values );
+            print "','','" if $#values lt $#fields;
+            print "');\n";
+        }
+
+        when (/CSV/) {
+            print '"', join( '","', @values );
+            print '","","' if $#values lt $#fields;
+            print "\"\n";
+        }
+    }
+}
+
+=pod
+
+=head1 NAME
+
+registrans_grabber - Collecte les données du registre des entreprises
+à partir du site web du ministère
+
+=head1 DESCRIPTION
+
+Ce programme permet d'interroger le site web internet du ministère
+à l'adresse :
+
+ L<http://www.developpement-durable.gouv.fr/Liste-des-entreprises-inscrites.html>
+
+et de produire en sortie des données formatées en CSV ou un script SQL.
+
+=head1 SYNOPSYS
+
+ registrans__grabber [--verbose|-v] [-d|--debug]
+         -f|--format <SQL|CSV>
+         -o|--output <FICHIER>
+
+ get_licence_info [-h|--help]
+
+=head1 OPTIONS
+
+=over 4
+
+=item -f|--format   format de sortie : SQL ou CSV
+                    par défaut : SQL
+
+=item uf|--output   précise le fichier de sortie
+                    par défaut : sortie standard
+
+=item -v|--verbose  bavard (affiche le nom de chaque page lue)
+
+=item -d|--debug    deverminage (plein de détails sur les données retournées)
+
+=item -h|--help     affiche ce message
+
+=back
+
+=head1 EXAMPLE
+
+Pour collecter toutes les données et produire un fichier CSV en sortie
+en n'affichant à l'écran que les noms des pages traitées :
+
+ registrans_grabber -v -f CSV -o registrans.csv
+ 
+Pour générer un fichier SQL horodaté :
+
+ registrans_grabber -o registrans-$( date +'%Y-%m-%d' ).sql
+
+À des fins de déverminage :
+
+ registrans_grabber  -v -d -o /dev/null
+
+=head1 CHANGELOG
+
+=item S<v0.1 :> version initiale
+
+=item S<v0.2 :> suppression des entêtes de tableaux répétés, formatage
+du I<CSV>
+
+=item S<v0.3 :> échappement des caractères S<« ' »> dans les champs texte du
+I<SQL>
+
+=head1 COPYRIGHT
+
+registrans_grabber est Copyright (C) 2011, Laurent Gautrot
+
+Ce programme est un logiciel libre; vous pouvez le redistribuer ou le modifier
+sous la même licence d'utilisation que Perl.
+
+=head1 AUTHOR
+
+Laurent Gautrot 
+
+=cut
