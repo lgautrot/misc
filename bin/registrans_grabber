@@ -8,7 +8,7 @@ use HTML::TreeBuilder;
 use Getopt::Long;
 use Pod::Usage;
 
-our $VERSION = '0.4';
+our $VERSION = '0.5';
 
 my $format = 'SQL';
 my ( $output, $verbose, $help, $debug );
@@ -99,11 +99,11 @@ sub print_line {
 =head1 NAME
 
 registrans_grabber - Collecte les données du registre des entreprises
-à partir du site web du ministère
+à partir du site web du ministère en charge des Transports
 
 =head1 DESCRIPTION
 
-Ce programme permet d'interroger le site web internet du ministère
+Ce programme permet d'interroger le site web internet du ministère des Transports
 à l'adresse :
 
  L<http://www.developpement-durable.gouv.fr/Liste-des-entreprises-inscrites.html>
@@ -161,9 +161,13 @@ du I<CSV>
 =item S<v0.3 :> échappement des caractères S<« ' »> dans les champs texte du
 I<SQL>
 
+=item S<v0.4 :> suppression des espaces dans les valeurs numériques
+
+=item S<v0.5 :> mise à jour de la documentation
+
 =head1 COPYRIGHT
 
-registrans_grabber est Copyright (C) 2011, Laurent Gautrot
+registrans_grabber est Copyright (C) 2011-2012, Laurent Gautrot
 
 Ce programme est un logiciel libre; vous pouvez le redistribuer ou le modifier
 sous la même licence d'utilisation que Perl.
