@@ -8,7 +8,7 @@ use HTML::TreeBuilder;
 use Getopt::Long;
 use Pod::Usage;
 
-our $VERSION = '0.5';
+our $VERSION = '0.6';
 
 my $format = 'SQL';
 my ( $output, $verbose, $help, $debug );
@@ -32,7 +32,7 @@ if ($output) {
 my $base_url = 'http://www2.transports.equipement.gouv.fr/registres';
 
 # grab data from the website
-foreach my $registry (qw/voyageurs marchandises commissionnaires/) {
+foreach my $registry (qw/marchandises voyageurs commissionnaires/) {
     foreach my $page ( 0 .. 100 ) {
         my $url = "$base_url/$registry/$page.htm";
         warn $url, "\n" if $verbose;
@@ -52,7 +52,13 @@ foreach my $registry (qw/voyageurs marchandises commissionnaires/) {
 
             # push each cell data in a list
             foreach my $td ( $tr->look_down( '_tag', 'td' ) ) {
-                push @values, $td->as_text;
+                my $text = $td->as_text;
+
+                # remove non-regular "space" character between digits
+                my $space=chr(160);
+                $text =~ s/$space//g;
+
+                push @values, $text;
             }
 
             # print the list using the selected format
@@ -75,11 +81,11 @@ sub print_line {
 
         when (/SQL/) {
             
+            # escape quotes: simple replacement ' becomes ''
             my @escaped_values =
               map { ( my $s = $_ ) =~ s/'/''/g; $s } @values;
-            @escaped_values =
-              map { ( my $s = $_ ) =~ s/'(\d+)[^\d]+(\d+)'/'$1$2'/g; $s } @values;
-            print "INSERT INTO entreprises(", join( ',', @fields ),
+
+           print "INSERT INTO entreprises(", join( ',', @fields ),
               ") VALUES('",
               join( "','", @escaped_values );
             print "','','" if $#values lt $#fields;
@@ -164,6 +170,9 @@ I<SQL>
 =item S<v0.4 :> suppression des espaces dans les valeurs numériques
 
 =item S<v0.5 :> mise à jour de la documentation
+
+=item S<v0.6 :> correction de la suppression du caractère « espace »
+dans les valeurs numériques
 
 =head1 COPYRIGHT
 
