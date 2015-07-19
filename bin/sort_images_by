@@ -2,19 +2,19 @@
 
 use strict;
 use warnings;
-#use Image::EXIF;
 use Image::ExifTool qw(:Public);
 use File::Path;
 use File::Copy;
+use Getopt::Long;
+
+my ( $verbose );
+GetOptions( "verbose"  => \$verbose);
 
 my $path;
 
 foreach my $file ( sort glob('*jpg') ) {
 
     if ( $0 =~ m/exif/ ) {
-        #my $exif       = new Image::EXIF($file);
-        #my $other_info = $exif->get_other_info();
-        #my $date       = $other_info->{'Image Digitized'};
         my $info = ImageInfo($file);
         my $date   = $info->{DateTimeOriginal};
         $path = join '-', ( split /[:|\s+]/, $date )[ 0 .. 2 ];
@@ -25,10 +25,11 @@ foreach my $file ( sort glob('*jpg') ) {
         $path = "$year-$month-$day";
     }
 
-    mkpath( $path, { verbose => 1 } )
+    mkpath( $path, { verbose => $verbose } )
       or warn "could not mkpath '$path': $!"
       unless -d $path;
-
+    
+    print "$file -> $path/$file\n" if $verbose;
     move( $file, $path ) and print "$file -> $path/$file\n"
       or warn "could not move '$file' to '$path': $!";
 }
