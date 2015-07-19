@@ -2,6 +2,7 @@ This is a set of handy scripts:
 * fullcheck: will check and tidy Perl scripts and modules
 * functions: shell functions
 * registrans_grabber: Perl script for data transform
+* rename_lc : Perl script for bulk renaming of files to lowercase
 * sort_images_by: Images sorting tools (with two symlinks: sort_images_by_exifdate and sort_images_by_filename)
 * ssh-to: wrapper for SSH connections
 * urxvt: wrapper/launcher for urxvtc
