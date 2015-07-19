@@ -1,0 +1,59 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use Getopt::Long;
+use MIME::QuotedPrint;
+use MIME::Base64;
+use File::MimeInfo::Magic;
+use Mail::Sendmail;
+
+my $to      = 'Me <someone@example.com>';
+my $from    = 'Me <someone@example.com>';
+my $subject = '';
+my $body    = '';
+my $file    = '';
+GetOptions(
+    "to=s"      => \$to,
+    "from=s"    => \$from,
+    "subject=s" => \$subject,
+    "message=s" => \$body,
+    "file=s"    => \$file,
+) or die("Error in command line arguments\n");
+
+my %mail = (
+    from    => $from,
+    to      => $to,
+    subject => $subject,
+);
+
+my $boundary = "====" . time() . "====";
+$mail{'content-type'} = "multipart/mixed; boundary=\"$boundary\"";
+
+my $message = encode_qp($body);
+
+my $mime_type = mimetype($file);
+
+open( my $filehandle, '<', $file ) or die "Cannot read $file: $!";
+binmode $filehandle;
+undef $/;
+$mail{body} = encode_base64(<$filehandle>);
+close $filehandle;
+
+$boundary = '--' . $boundary;
+$mail{body} = <<END_OF_BODY;
+$boundary
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+$message
+$boundary
+Content-Type: $mime_type; name="$file"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="$file"
+
+$mail{body}
+$boundary--
+END_OF_BODY
+
+sendmail(%mail) || print "Error: $Mail::Sendmail::error\n";
+print "sent mail to $to\n";
