@@ -1,0 +1,21 @@
+#!/usr/bin/env perl
+use strict ;
+use warnings;
+use Getopt::Long;
+
+my ( $verbose );
+GetOptions(
+    "verbose"  => \$verbose
+);
+
+my $start_dir = '.' ;
+
+opendir(my $dir, $start_dir) || die "can't opendir '$start_dir': $!";
+while (my $file=readdir($dir)) {
+   chomp($file);
+   next if $file=~/^\./;
+   next if !(-f $file);
+   print("$file -> ", lc $file, "\n") if $verbose;
+   rename $file, lc $file  if ($file ne lc $file);
+}
+closedir $dir;
