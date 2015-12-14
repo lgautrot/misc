@@ -1,0 +1,116 @@
+#!/bin/bash
+
+function help() {
+  echo "usage: $0 <IPADDR> [IPADDR] [...]"
+  exit 1
+}
+
+case "$1" in
+  ""|"-h"|"-H"|"--help")
+    help
+  ;;
+esac
+
+for IPADDR in $@
+do
+  # connect without SSH hostkey checking
+  ssh $IPADDR -o Stricthostkeychecking=no \
+   'perl -e '\''
+use strict;
+use warnings;
+
+my $filehandle;
+
+# get hostname
+open ($filehandle, "<", "/proc/sys/kernel/hostname") or die "could not open: $!";
+my $hostname=<$filehandle>;
+print $hostname;
+close $filehandle or die "could not close: $!";
+
+# get interfaces list
+my %interface;
+open ($filehandle, "<", "/proc/net/dev") or die "could not open: $!";
+while (<$filehandle>) {
+  chomp;
+  next unless /:/;
+  s/^\s*(\S+):.*/$1/;
+  next if /^lo$/;  # skip loopback
+  next if /^bond/; # skip bound interfaces
+  next if /^br/;   # skip bridges
+  next if /^ov/;   # skip Open vSwitch interfaces
+  next if /^vlan/; # skip VLAN interfaces
+  next if /^q/;    # skip qlogic interfaces
+  next if /^tap/;  # skip TUN/TAP interfaces
+  next if /^w/;    # skip wireless interfaces
+  $interface{$_} = {};
+}
+close $filehandle or die "could not close: $!";
+
+# get bus id 
+foreach my $name (keys %interface) {
+  open ($filehandle, "<", "/sys/class/net/$name/device/uevent") or die "could not open: $!";
+  while (<$filehandle>) {
+    chomp;
+    next unless /PCI_SLOT_NAME=/;
+    s/.*=(\S+)/$1/;
+    $interface{$name}{bus_id}=$_;
+  }
+  close $filehandle or die "could not close: $!";
+}
+
+# get hardware/mac/ethernet address
+foreach my $name (keys %interface) {
+  open ($filehandle, "<", "/sys/class/net/$name/address") or die "could not open: $!";
+  while (<$filehandle>) {
+    chomp;
+    $interface{$name}{mac_address}=$_;
+  }
+  close $filehandle or die "could not close: $!";
+}
+
+# get speed
+foreach my $name (keys %interface) {
+  open ($filehandle, "<", "/sys/class/net/$name/speed") or die "could not open: $!";
+  while (<$filehandle>) {
+    chomp;
+    $interface{$name}{speed}=$_;
+  }
+  close $filehandle or die "could not close: $!";
+}
+
+# get duplex
+foreach my $name (keys %interface) {
+  open ($filehandle, "<", "/sys/class/net/$name/duplex") or die "could not open: $!";
+  while (<$filehandle>) {
+    chomp;
+    $interface{$name}{duplex}=$_;
+  }
+  close $filehandle or die "could not close: $!";
+}
+
+# get state UP/DOWN
+foreach my $name (keys %interface) {
+  open ($filehandle, "<", "/sys/class/net/$name/operstate") or die "could not open: $!";
+  while (<$filehandle>) {
+    chomp;
+    $interface{$name}{status}=$_;
+  }
+  close $filehandle or die "could not close: $!";
+}
+
+# display result
+foreach my $name (keys %interface) {
+  print join(" ",
+    $name,
+    $interface{$name}{bus_id},
+    $interface{$name}{mac_address},
+    join(
+      "-",
+      $interface{$name}{speed},
+      $interface{$name}{duplex},
+    ),
+    uc $interface{$name}{status}
+  ), "\n";
+}
+'\'
+done
