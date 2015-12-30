@@ -42,6 +42,7 @@ while (<$filehandle>) {
   next if /^q/;    # skip qlogic interfaces
   next if /^tap/;  # skip TUN/TAP interfaces
   next if /^w/;    # skip wireless interfaces
+  next if /^dock/; # skip Docker interfaces
   $interface{$_} = {};
 }
 close $filehandle or die "could not close: $!";
