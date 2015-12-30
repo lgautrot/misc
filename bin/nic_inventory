@@ -26,8 +26,15 @@ my $filename;
 $filename="/proc/sys/kernel/hostname";
 open ($filehandle, "<", $filename) or die "could not open $filename: $!";
 my $hostname=<$filehandle>;
-print $hostname;
+chomp $hostname;
 close $filehandle or die "could not close: $!";
+
+# get IP address
+my $packed_ip=gethostbyname($hostname);
+my $ip_address;
+if (defined $packed_ip) {
+  $ip_address = inet_ntoa($packed_ip);
+}
 
 # get interfaces list
 my %interface;
@@ -108,6 +115,11 @@ foreach my $name (keys %interface) {
 }
 
 # display result
+print join(" ",
+  $hostname,
+  $ip_address
+);
+print "\n";
 foreach my $name (keys %interface) {
   print join(" ",
     $name,
