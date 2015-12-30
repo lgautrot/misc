@@ -69,7 +69,7 @@ foreach my $name (keys %interface) {
   close $filehandle or die "could not close: $!";
 }
 
-# get speed
+# get speed - for Lemmy
 foreach my $name (keys %interface) {
   open ($filehandle, "<", "/sys/class/net/$name/speed") or die "could not open: $!";
   while (<$filehandle>) {
