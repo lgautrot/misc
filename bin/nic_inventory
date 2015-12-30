@@ -18,6 +18,7 @@ do
    'perl -e '\''
 use strict;
 use warnings;
+use Socket;
 
 my $filehandle;
 my $filename;
