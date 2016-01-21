@@ -124,12 +124,12 @@ print "\n";
 foreach my $name (sort keys %interface) {
   print join(" ",
     $name,
-    $interface{$name}{bus_id},
+    defined($interface{$name}{bus_id}) ? $interface{$name}{bus_id} : "",
     $interface{$name}{mac_address},
     join(
       "-",
-      $interface{$name}{speed},
-      $interface{$name}{duplex},
+      defined($interface{$name}{speed}) ? $interface{$name}{speed} : "",
+      defined ($interface{$name}{duplex}) ? $interface{$name}{duplex} : "",
     ),
     uc $interface{$name}{status}
   ), "\n";
