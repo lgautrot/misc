@@ -121,7 +121,7 @@ print join(" ",
   $ip_address
 );
 print "\n";
-foreach my $name (keys %interface) {
+foreach my $name (sort keys %interface) {
   print join(" ",
     $name,
     $interface{$name}{bus_id},
