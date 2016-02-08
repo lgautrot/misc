@@ -1,0 +1,108 @@
+#!/bin/bash
+
+function help() {
+  echo "usage: $0 <IPADDR> [IPADDR] [...]"
+  exit 1
+}
+
+case "$1" in
+  ""|"-h"|"-H"|"--help")
+    help
+  ;;
+esac
+
+for IPADDR in $@
+do
+  # connect without SSH hostkey checking
+  ssh $IPADDR -o Stricthostkeychecking=no \
+   'perl -e '\''
+use strict;
+use warnings;
+use Socket;
+
+my $filehandle;
+my $filename;
+
+# get hostname
+$filename="/proc/sys/kernel/hostname";
+open ($filehandle, "<", $filename) or die "could not open $filename: $!";
+my $hostname=<$filehandle>;
+chomp $hostname;
+close $filehandle or die "could not close: $!";
+
+# get IP address
+my $ip_address;
+my $packed_ip = gethostbyname($hostname);
+if (defined $packed_ip) {
+  $ip_address = inet_ntoa($packed_ip);
+}
+
+# get FC host list
+chdir "/sys/class/fc_host" or die "could not change directory: $!\n";
+my %fc_host;
+while (<*>) {
+  $fc_host{$_} = {};
+}
+
+# get world wide name
+foreach my $name (keys %fc_host) {
+  open ($filehandle, "<", "/sys/class/fc_host/$name/port_name") or die "could not open: $!";
+  while (<$filehandle>) {
+    chomp;
+    $fc_host{$name}{wwn}=$_;
+  }
+  close $filehandle or die "could not close: $!";
+}
+
+# get state online/offline
+foreach my $name (keys %fc_host) {
+  $filename="/sys/class/fc_host/$name/port_state";
+  open ($filehandle, "<", $filename) or die "could not open $filename: $!";
+  while (<$filehandle>) {
+    chomp;
+    $fc_host{$name}{state}=$_;
+  }
+  close $filehandle or die "could not close: $!";
+}
+
+# get speed
+foreach my $name (keys %fc_host) {
+  $filename="/sys/class/fc_host/$name/speed";
+  open ($filehandle, "<", $filename) or die "could not open $filename: $!";
+  while (<$filehandle>) {
+    chomp;
+    $fc_host{$name}{speed}=$_;
+  }
+  close $filehandle or die "could not close: $!";
+}
+
+# get available speeds
+foreach my $name (keys %fc_host) {
+  $filename="/sys/class/fc_host/$name/supported_speeds";
+  open ($filehandle, "<", $filename) or die "could not open $filename: $!";
+  while (<$filehandle>) {
+    chomp;
+    $fc_host{$name}{supported_speeds}=$_;
+  }
+  close $filehandle or die "could not close: $!";
+}
+
+# display result
+print join (" ",
+  $hostname,
+  $ip_address
+);
+print "\n";
+foreach my $name (sort keys %fc_host) {
+  print join(" ",
+    $name,
+    $fc_host{$name}{wwn},
+    $fc_host{$name}{speed},
+    " (", $fc_host{$name}{supported_speeds}, ") ",
+    $fc_host{$name}{state}
+  ), "\n";
+}
+'\'
+done
+# hostname => /proc/sys/kernel/hostname
+# systool -c fc_host => /sys/class/fc_host
