@@ -87,6 +87,17 @@ foreach my $name (keys %fc_host) {
   close $filehandle or die "could not close: $!";
 }
 
+# get symbolic name
+foreach my $name (keys %fc_host) {
+  $filename="/sys/class/fc_host/$name/symbolic_name";
+  open ($filehandle, "<", $filename) or die "could not open $filename: $!";
+  while (<$filehandle>) {
+    chomp;
+    $fc_host{$name}{symbolic_name}=$_;
+  }
+  close $filehandle or die "could not close: $!";
+}
+
 # display result
 print join (" ",
   $hostname,
@@ -99,6 +110,7 @@ foreach my $name (sort keys %fc_host) {
     $fc_host{$name}{wwn},
     $fc_host{$name}{speed},
     " (", $fc_host{$name}{supported_speeds}, ") ",
+    $fc_host{$name}{symbolic_name},
     $fc_host{$name}{state}
   ), "\n";
 }
