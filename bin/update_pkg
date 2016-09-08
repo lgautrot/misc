@@ -1,4 +1,5 @@
 #!/bin/sh
 
-test -f /etc/debian_version && ( sudo aptitude update ; sudo aptitude -q -y dist-upgrade ; sudo rm -fv /var/tmp/pending_pkg.$( date +'%Y-%m-%d' ) )
+test -f /etc/debian_version && ( sudo aptitude update ; sudo aptitude -q -y dist-upgrade )
 test -f /etc/redhat-release && ( sudo yum -y update )
+test -f /var/tmp/pending_pkg.$( date +'%Y-%m-%d' ) && sudo rm -v /var/tmp/pending_pkg.$( date +'%Y-%m-%d' )
